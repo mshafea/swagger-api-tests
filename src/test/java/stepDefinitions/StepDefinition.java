@@ -4,8 +4,6 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import io.restassured.builder.ResponseSpecBuilder;
-import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
@@ -20,41 +18,29 @@ import static org.junit.Assert.assertEquals;
 
 public class StepDefinition extends Utils {
     RequestSpecification reqspec;
-    ResponseSpecification resspec;
     Response response;
     TestDataBuild data = new TestDataBuild();
-    static String petId, orderId;
+    static String id;
 
 
-    @Given("Pet is created with {string} {string} {string}")
-    public void pet_is_created_with(String id, String name, String status) throws IOException {
+    @Given("Add Pet Payload with {string} {string} {string}")
+    public void add_pet_payload_with(String id, String name, String status) throws IOException {
         reqspec = given().spec(requestSpecification()).body(data.addPet(id, name, status));
-        petId = id;
     }
 
     @When("user calls {string} with {string} https request")
     public void user_calls_with_https_request(String resource, String httpMethod) {
 
         APIResources resourceAPI = APIResources.valueOf(resource);
-        resspec = new ResponseSpecBuilder().expectStatusCode(200).expectContentType(ContentType.JSON).build();
 
-        if (httpMethod.equalsIgnoreCase("POST"))
+        if (httpMethod.equalsIgnoreCase("POST")) {
             response = reqspec.when().post(resourceAPI.getResource());
-
-        switch (resource) {
-            case ("petAPI"):
-                if (httpMethod.equalsIgnoreCase("GET"))
-                    response = reqspec.when().get(resourceAPI.getResource() + "/" + petId);
-                else if (httpMethod.equalsIgnoreCase("DELETE"))
-                    response = reqspec.when().delete(resourceAPI.getResource() + "/" + petId);
-                break;
-            case ("storeAPI"):
-                if (httpMethod.equalsIgnoreCase("GET"))
-                    response = reqspec.when().get(resourceAPI.getResource() + "/" + orderId);
-                else if (httpMethod.equalsIgnoreCase("DELETE"))
-                    response = reqspec.when().delete(resourceAPI.getResource() + "/" + orderId);
-                break;
-        }
+            id = getJsonPath(response, "id");
+                    System.out.println("id :: "+id);
+        } else if (httpMethod.equalsIgnoreCase("GET"))
+            response = reqspec.when().get(resourceAPI.getResource() + "{id}");
+        else if (httpMethod.equalsIgnoreCase("DELETE"))
+            response = reqspec.when().delete(resourceAPI.getResource() + "{id}");
     }
 
     @Then("the API call got success with status code {int}")
@@ -67,20 +53,18 @@ public class StepDefinition extends Utils {
         assertEquals(getJsonPath(response, keyValue), expectedValue);
     }
 
-    @Given("there is pet with {string}")
-    public void thereIsPetWith(String id) throws IOException {
-        petId = id;
-        reqspec = given().spec(requestSpecification());
+    @Given("Delete Pet Payload")
+    public void deletePetPayload() throws IOException {
+        reqspec = given().spec(requestSpecification()).pathParam("id", id);
     }
 
-    @And("user places new order with {string} {string} {string}")
-    public void userPlacesNewOrderWith(String orderId, String petId, String quantity) throws IOException {
+    @And("Add Order Payload with {string} {string} {string}")
+    public void add_order_payload_with(String orderId, String petId, String quantity) throws IOException {
         reqspec = given().spec(requestSpecification()).body(data.placeOrder(orderId, petId, quantity));
     }
 
-    @Given("there is an order with {string}")
-    public void thereIsAnOrderWith(String orderId) throws IOException {
-        StepDefinition.orderId = orderId;
-        reqspec = given().spec(requestSpecification());
+    @Given("Delete Order Payload")
+    public void delete_order_payload() throws IOException {
+        reqspec = given().spec(requestSpecification().pathParam("id", id));
     }
 }
